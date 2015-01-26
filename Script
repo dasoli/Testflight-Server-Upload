@@ -11,8 +11,6 @@ XCODE_BOT_PROJECT=$(ls -1rt /Library/Developer/XcodeServer/IntegrationAssets/ | 
 
 PROVISIONING_PROFILE="/Library/Developer/XcodeServer/ProvisioningProfiles/<your prov name>.mobileprovision"
 
-#EXAMPLE:"/Library/Server/Xcode/Data/ProvisioningProfiles/DocLink_InHouse_2013.mobileprovision"
-
 SIGNING_IDENTITY="<name of your sign ident>"
 #this should be an exakt match of your Dev / Distri certificate name
 
