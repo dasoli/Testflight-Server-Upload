@@ -1,0 +1,70 @@
+# Valid and working as of 01/26/2015
+# Xcode 6.X, XCode Server
+#
+API_TOKEN="<your token>"
+
+TEAM_TOKEN="<teamtoken>"
+
+DISTRIBUTION_LISTS="<if you have a list for deploy>"
+
+XCODE_BOT_PROJECT=$(ls -1rt /Library/Developer/XcodeServer/IntegrationAssets/ | tail -1)
+
+PROVISIONING_PROFILE="/Library/Developer/XcodeServer/ProvisioningProfiles/<your prov name>.mobileprovision"
+
+#EXAMPLE:"/Library/Server/Xcode/Data/ProvisioningProfiles/DocLink_InHouse_2013.mobileprovision"
+
+SIGNING_IDENTITY="<name of your sign ident>"
+#this should be an exakt match of your Dev / Distri certificate name
+
+# DO NOT EDIT BELOW HERE!
+########################################
+
+# Clear out any old copies of the Archive
+echo "Removing old Archive files from /tmp...";
+/bin/rm -rf /tmp/Archive.xcarchive*
+
+#Copy over the latest build the bot just created
+
+echo "Copying latest Archive to /tmp/...";
+
+LATESTBUILD=$(ls -1rt /Library/Developer/XcodeServer/IntegrationAssets/$XCODE_BOT_PROJECT/ | tail -1)
+/bin/cp -Rp "/Library/Developer/XcodeServer/IntegrationAssets/$XCODE_BOT_PROJECT/$LATESTBUILD/Archive.xcarchive.zip" "/tmp/"
+
+echo "Extracting Archive to /tmp/...";
+cd "/tmp/"
+
+unzip "/tmp/Archive.xcarchive.zip"
+echo "Done with Unzip"
+
+# PRODUCT_NAME="\"$(ls -1rt Archive.xcarchive/Products/Applications/|sed -e 's/\.app$//'|sed -e 's/ /\\ /')\""
+PRODUCT_NAME="$(ls -1rt Archive.xcarchive/Products/Applications/|sed -e 's/\.app$//')"
+
+DSYM="/tmp/Archive.xcarchive/dSYMs/$PRODUCT_NAME.app.dSYM"
+
+IPA="/tmp/$PRODUCT_NAME.ipa"
+
+APP="/tmp/Archive.xcarchive/Products/Applications/$PRODUCT_NAME.app"
+
+echo "Creating .ipa for $PRODUCT_NAME"
+/bin/rm "$IPA"
+/usr/bin/xcrun -sdk iphoneos PackageApplication -v "$APP" -o "$IPA" --sign "$SIGNING_IDENTITY" --embed "$PROVISIONING_PROFILE"
+
+echo "Done with IPA creation."
+
+echo "Zipping .dSYM for $PRODUCT_NAME"
+/bin/rm "$DSYM.zip"
+/usr/bin/zip -r "$DSYM.zip" "$DSYM"
+
+echo "Created .dSYM for $PRODUCT_NAME"
+
+echo "*** Uploading $PRODUCT_NAME to TestFlight ***"
+/usr/bin/curl "http://testflightapp.com/api/builds.json" \
+-F file=@"$IPA" \
+-F dsym=@"$DSYM.zip" \
+-F api_token="$API_TOKEN" \
+-F team_token="$TEAM_TOKEN" \
+-F distribution_lists="$DISTRIBUTION_LISTS" \
+-F notes="The Bot did it for you!"
+
+echo "TestFlight upload finished!"
+echo "Peace out guys"
